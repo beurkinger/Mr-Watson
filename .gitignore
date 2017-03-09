@@ -1,4 +1,4 @@
-index.php
+app/config.php
 vendor
 
 # Windows image file caches
