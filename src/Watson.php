@@ -31,6 +31,34 @@ class Watson {
   const DEFAULT_VERSION = '2016-05-19';
 
   /**
+   * The max number of bytes a text can contains in a GET request.
+   *
+   * @var int
+   */
+  const MAX_GET_SIZE = 8 * 1024;
+
+  /**
+   * Tone filter emotion
+   *
+   * @var string
+   */
+  const TONE_FILTER_EMOTION = 'emotion';
+
+  /**
+   * Tone filter language
+   *
+   * @var string
+   */
+  const TONE_FILTER_LANGUAGE = 'language';
+
+  /**
+   * Tone filter social
+   *
+   * @var string
+   */
+  const TONE_FILTER_SOCIAL = 'social';
+
+  /**
    * The Guzzle client instance
    *
    * @var \GuzzleHttp\Client
@@ -43,6 +71,20 @@ class Watson {
    * @var string
    */
   private $version = self::DEFAULT_VERSION;
+
+  /**
+   * Should the response contains sentence-level analysis ?
+   *
+   * @var bool
+   */
+  private $sentences = true;
+
+  /**
+   * To filter by a specific tone
+   *
+   * @var string
+   */
+  private $toneFilter = '';
 
   /**
    * The request options
@@ -65,18 +107,41 @@ class Watson {
   }
 
   /**
-   * Make a request and return an array
+   * Take a text, decide if a GET or POST request should be done, make the request
+   * and return the response as an array
    * @param string  $text
    * @return array
    */
   public function request ($text) {
+    if (strlen($text) < self::MAX_GET_SIZE) {
+      $response = $this->get($text);
+    } else {
+      $response = $this->post($text);
+    }
+    var_dump($response);
+    return $this->parseResponse($response);
+  }
+
+  /**
+   * Make a GET request and return a Guzzle Response object
+   * @param string  $text
+   * @return \GuzzleHttp\Psr7\Response
+   */
+  public function get ($text) {
       $options = $this->getOptions();
-      $options['query'] = [
-          'version' => $this->getVersion(),
-          'text' => $text
-      ];
-      $response = $this->guzzle->request('GET', '', $options);
-      return $this->parseResponse($response);
+      $options['query']['text'] = $text;
+      return $this->guzzle->request('GET', '', $options);
+  }
+
+  /**
+   * Make a POST request and return a Guzzle Response object
+   * @param string  $text
+   * @return \GuzzleHttp\Psr7\Response
+   */
+  public function post ($text) {
+      $options = $this->getOptions();
+      $options['json'] = ['text' => $text];
+      return $this->guzzle->request('POST', '', $options);
   }
 
   /**
@@ -132,6 +197,13 @@ class Watson {
    * @return array
    */
   public function getOptions () {
+      $this->options['query'] = [
+          'version' => $this->getVersion(),
+          'sentences' => $this->getSentences()
+      ];
+      if ($this->getToneFilter()) {
+        $this->options['query']['tones'] = $this->getToneFilter();
+      }
       return $this->options;
   }
 
@@ -141,6 +213,7 @@ class Watson {
    */
   public function setVersion ($version) {
       $this->version = $version;
+      return $this;
   }
 
   /**
@@ -148,6 +221,39 @@ class Watson {
    */
   public function getVersion () {
       return $this->version;
+  }
+
+  /**
+   * @param bool $bool
+   * @return Beurkinger\MrWatson\Watson
+   */
+  public function setSentences ($bool) {
+      $this->sentences = $bool;
+      return $this;
+  }
+
+  /**
+   * @return string
+   */
+  public function getSentences() {
+      return $this->sentences ? 'true' : 'false';
+  }
+
+  /**
+   * @param string $tone
+   * @return Beurkinger\MrWatson\Watson
+   */
+  public function setToneFilter ($tone) {
+      $tones = [self::TONE_FILTER_SOCIAL, self::TONE_FILTER_EMOTION, self::TONE_FILTER_LANGUAGE];
+      if (in_array($tone, $tones)) $this->toneFilter = $tone;
+      return $this;
+  }
+
+  /**
+   * @return string
+   */
+  public function getToneFilter() {
+      return $this->toneFilter;
   }
 
 }
