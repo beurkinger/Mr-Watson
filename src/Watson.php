@@ -118,7 +118,6 @@ class Watson {
     } else {
       $response = $this->post($text);
     }
-    var_dump($response);
     return $this->parseResponse($response);
   }
 
